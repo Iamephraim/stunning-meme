@@ -15,7 +15,7 @@
           }
         });
       },
-      { threshold: 0.4 }
+      { threshold: 0.25 }
     );
 
     lines.forEach(function (line) {
@@ -45,117 +45,20 @@
     master.gain.value = 0;
     master.connect(ctx.destination);
 
-    // slow, gentle breathing on the overall volume
     var breathe = ctx.createOscillator();
     var breatheGain = ctx.createGain();
-    breathe.frequency.value = 0.045; // ~22s cycle
+    breathe.frequency.value = 0.045;
     breatheGain.gain.value = 0.028;
     breathe.connect(breatheGain);
     breatheGain.connect(master.gain);
     breathe.start();
 
-    // a soft low-pass so nothing feels sharp or digital
     var filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
     filter.frequency.value = 900;
     filter.connect(master);
 
-    // two voices, a fifth apart, gently detuned against each other
-    var freqs = [110, 165]; // A2 and E3
-    var voices = freqs.map(function (f) {
-      var osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.value = f;
-
-      var detuned = ctx.createOscillator();
-      detuned.type = "sine";
-      detuned.frequency.value = f * 1.004;
-
-      var voiceGain = ctx.createGain();
-      voiceGain.gain.value = 0.5;
-
-      osc.connect(voiceGain);
-      detuned.connect(voiceGain);
-      voiceGain.connect(filter);
-
-      osc.start();
-      detuned.start();
-      return { osc: osc, detuned: detuned, gain: voiceGain };
-    });
-
-    return { master: master, breathe: breathe, voices: voices };
-  }
-
-  function startAmbient() {
-    if (!audioCtx) {
-      var AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      audioCtx = new AudioContext();
-    }
-    if (audioCtx.state === "suspended") {
-      audioCtx.resume();
-    }
-    if (!padNodes) {
-      padNodes = buildPad();
-    }
-    var now = audioCtx.currentTime;
-    padNodes.master.gain.cancelScheduledValues(now);
-    padNodes.master.gain.setValueAtTime(padNodes.master.gain.value, now);
-    padNodes.master.gain.linearRampToValueAtTime(0.06, now + 2.5);
-    isPlaying = true;
-  }
-
-  function stopAmbient() {
-    if (!audioCtx || !padNodes) return;
-    var now = audioCtx.currentTime;
-    padNodes.master.gain.cancelScheduledValues(now);
-    padNodes.master.gain.setValueAtTime(padNodes.master.gain.value, now);
-    padNodes.master.gain.linearRampToValueAtTime(0.0001, now + 1.2);
-    isPlaying = false;
-  }
-
-  if (toggle) {
-    toggle.addEventListener("click", function () {
-      if (isPlaying) {
-        stopAmbient();
-        toggle.setAttribute("aria-pressed", "false");
-        toggle.setAttribute("aria-label", "Play soft ambient sound");
-      } else {
-        startAmbient();
-        toggle.setAttribute("aria-pressed", "true");
-        toggle.setAttribute("aria-label", "Mute ambient sound");
-      }
-    });
-  }
-})();
-  var toggle = document.getElementById("soundToggle");
-  var audioCtx = null;
-  var padNodes = null;
-  var isPlaying = false;
-
-  function buildPad() {
-    var ctx = audioCtx;
-    var master = ctx.createGain();
-    master.gain.value = 0;
-    master.connect(ctx.destination);
-
-    // slow, gentle breathing on the overall volume
-    var breathe = ctx.createOscillator();
-    var breatheGain = ctx.createGain();
-    breathe.frequency.value = 0.045; // ~22s cycle
-    breatheGain.gain.value = 0.028;
-    breathe.connect(breatheGain);
-    breatheGain.connect(master.gain);
-    breathe.start();
-
-    // a soft low-pass so nothing feels sharp or digital
-    var filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.value = 900;
-    filter.connect(master);
-
-    // two voices, a fifth apart, gently detuned against each other
-    var freqs = [110, 165]; // A2 and E3
+    var freqs = [110, 165];
     var voices = freqs.map(function (f) {
       var osc = ctx.createOscillator();
       osc.type = "sine";
